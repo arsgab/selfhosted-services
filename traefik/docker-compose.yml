@@ -1,0 +1,82 @@
+version: "3.8"
+
+services:
+  # Traefik itself + dashboard
+  traefik:
+    image: traefik:latest
+    container_name: traefik
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/letsencrypt/live/arsgab.io:/etc/certs:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik.yml:/traefik.yml:ro
+      - ./certs.yml:/etc/traefik/dynamic/certs.yml:ro
+      - ./letsencrypt/acme.json:/opt/acme.json
+    networks:
+      - nextcloud
+      - default
+    labels:
+      - "traefik.http.routers.traefik-dashboard.rule=Host(`${DASHBOARD_FQDN}`)"
+      - "traefik.http.routers.traefik-dashboard.service=api@internal"
+      - "traefik.http.middlewares.traefik-dashboard-auth.basicauth.users=${BASIC_AUTH}"
+      - "traefik.http.routers.traefik-dashboard.middlewares=traefik-dashboard-auth"
+
+  # Staticfiles server
+  fileserver:
+    image: nginx:alpine
+    container_name: fileserver
+    restart: always
+    volumes:
+      - ${FILESERVER_ROOT}:/usr/share/nginx/html:ro
+    labels:
+      - "traefik.http.routers.fileserver.rule=Host(`${FILESERVER_FQDN}`)"
+    networks:
+      - default
+
+  # ImgProxy instance
+  imgproxy:
+    image: darthsim/imgproxy:latest
+    container_name: imgproxy
+    restart: always
+    environment:
+      - IMGPROXY_KEY=${IMGPROXY_KEY}
+      - IMGPROXY_SALT=${IMGPROXY_SALT}
+      - IMGPROXY_FORMAT_QUALITY=jpeg=80,webp=100
+      - IMGPROXY_LOCAL_FILESYSTEM_ROOT=/images
+    volumes:
+      - ${IMGPROXY_FS_ROOT}:/images:ro
+    labels:
+      - "traefik.http.routers.imgproxy.rule=Host(`${IMGPROXY_FQDN}`)"
+    networks:
+      - default
+
+  # YouTube videos downloader
+  metube:
+    image: ghcr.io/alexta69/metube
+    container_name: metube
+    restart: always
+    environment:
+      - DOWNLOAD_DIR=/video
+      - AUDIO_DOWNLOAD_DIR=/audio
+      - CUSTOM_DIRS=false
+      - CREATE_CUSTOM_DIRS=false
+    volumes:
+      - /etc/metube/video:/video
+      - /etc/metube/audio:/audio
+    labels:
+      - "traefik.http.routers.metube.rule=Host(`${METUBE_FQDN}`)"
+      - "traefik.http.middlewares.metube-auth.basicauth.users=${BASIC_AUTH}"
+      - "traefik.http.routers.metube.middlewares=metube-auth"
+    networks:
+      - default
+
+networks:
+  default:
+    name: traefik
+    external: false
+  nextcloud:
+    external: true

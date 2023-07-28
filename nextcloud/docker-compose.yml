@@ -1,0 +1,79 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:alpine
+    restart: always
+    container_name: nextcloud_db
+    labels:
+      - "traefik.enable=false"
+    volumes:
+      - nextcloud-db:/var/lib/postgresql/data
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - nextcloud
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+
+  redis:
+    image: redis:alpine
+    restart: always
+    container_name: nextcloud_redis
+    labels:
+      - "traefik.enable=false"
+    volumes:
+      - nextcloud-redis:/var/lib/redis
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - nextcloud
+
+  app:
+    image: nextcloud:fpm-alpine
+    restart: always
+    container_name: nextcloud_app
+    labels:
+      - "traefik.enable=false"
+    depends_on:
+      - redis
+      - db
+    volumes:
+      - nextcloud-data:/var/www/html:z
+      - type: bind
+        source: ./data
+        target: /var/www/html/data
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - nextcloud
+    environment:
+      - NEXTCLOUD_ADMIN_USER=${NEXTCLOUD_ADMIN_USER}
+      - NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASSWORD}
+      - POSTGRES_HOST=db
+      - REDIS_HOST=redis
+      - NEXTCLOUD_TRUSTED_DOMAINS=localhost ${NEXTCLOUD_FQDN}
+      - OVERWRITEPROTOCOL=https
+      - OVERWRITECLIURL=https://${NEXTCLOUD_FQDN}
+
+  proxy:
+      build: ./web
+      restart: always
+      container_name: nextcloud_proxy
+      labels:
+        - "traefik.http.routers.nextcloud.rule=Host(`${NEXTCLOUD_FQDN}`)"
+      depends_on:
+        - app
+      volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - nextcloud-data:/var/www/html:z,ro
+      networks:
+        - nextcloud
+
+volumes:
+  nextcloud-db:
+  nextcloud-redis:
+  nextcloud-data:
+
+networks:
+  nextcloud:
+    external: true
