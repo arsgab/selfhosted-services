@@ -10,9 +10,9 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - /etc/letsencrypt/live/arsgab.io:/etc/certs:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/letsencrypt/live/${ROOT_FQDN}:/etc/certs:ro
       - ./traefik.yml:/traefik.yml:ro
       - ./certs.yml:/etc/traefik/dynamic/certs.yml:ro
       - ./letsencrypt/acme.json:/opt/acme.json
