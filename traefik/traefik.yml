@@ -1,7 +1,6 @@
 providers:
   docker:
     endpoint: "unix:///var/run/docker.sock"
-    exposedByDefault: true
     network: traefik
   file:
     directory: "/etc/traefik/dynamic"
@@ -20,17 +19,6 @@ entryPoints:
     http:
       tls: true
 
-certificatesResolvers:
-  cloudflare:
-    acme:
-      email: me@example.com
-      storage: acme.json
-      dnsChallenge:
-        provider: cloudflare
-        resolvers:
-          - "1.1.1.1:53"
-          - "1.0.0.1:53"
-
 api:
   dashboard: true
-  debug: true
+  debug: false

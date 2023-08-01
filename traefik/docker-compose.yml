@@ -33,6 +33,7 @@ services:
     volumes:
       - ${FILESERVER_ROOT}:/usr/share/nginx/html:ro
     labels:
+      - "traefik.enable=true"
       - "traefik.http.routers.fileserver.rule=Host(`${FILESERVER_FQDN}`)"
     networks:
       - default
@@ -50,6 +51,7 @@ services:
     volumes:
       - ${IMGPROXY_FS_ROOT}:/images:ro
     labels:
+      - "traefik.enable=true"
       - "traefik.http.routers.imgproxy.rule=Host(`${IMGPROXY_FQDN}`)"
     networks:
       - default
@@ -68,6 +70,7 @@ services:
       - /etc/metube/video:/video
       - /etc/metube/audio:/audio
     labels:
+      - "traefik.enable=true"
       - "traefik.http.routers.metube.rule=Host(`${METUBE_FQDN}`)"
       - "traefik.http.middlewares.metube-auth.basicauth.users=${BASIC_AUTH}"
       - "traefik.http.routers.metube.middlewares=metube-auth"
